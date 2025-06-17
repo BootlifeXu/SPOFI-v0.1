@@ -1,19 +1,31 @@
-// api/auth.js
 export default async function handler(req, res) {
-  const client_id = process.env.SPOTIFY_CLIENT_ID;
-  const client_secret = process.env.SPOTIFY_CLIENT_SECRET;
+  // Allow requests from any origin (or specify Netlify domain for stricter security)
+  res.setHeader("Access-Control-Allow-Origin", "https://famous-bombolone-f964c6.netlify.app");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  const auth = Buffer.from(`${client_id}:${client_secret}`).toString('base64');
+  // Handle preflight request
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
 
-  const response = await fetch("https://accounts.spotify.com/api/token", {
-    method: "POST",
-    headers: {
-      "Authorization": `Basic ${auth}`,
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: "grant_type=client_credentials"
-  });
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  const redirectUri = process.env.SPOTIFY_REDIRECT_URI;
 
-  const data = await response.json();
-  res.status(200).json(data);
+  const scopes = [
+    'user-library-read',
+    'user-read-playback-state',
+    'user-modify-playback-state',
+    'streaming'
+  ].join(' ');
+
+  const authUrl = `https://accounts.spotify.com/authorize` +
+    `?client_id=${clientId}` +
+    `&response_type=token` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&scope=${encodeURIComponent(scopes)}` +
+    `&show_dialog=true`;
+
+  res.status(200).json({ authUrl });
 }
